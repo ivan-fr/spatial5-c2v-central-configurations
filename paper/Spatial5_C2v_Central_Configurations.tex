@@ -1,0 +1,565 @@
+\documentclass[11pt,a4paper]{amsart}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\title[Bi-Symmetric Spatial 5-Body Central Configurations]{%
+Bi-Symmetric ($C_{2v}$) Spatial 5-Body Central Configurations:\\
+Exact Dziobek Reduction, Dual Pitchfork Thresholds, Complex Ray Elimination,\\
+and Lean 4 / \texttt{pandsysroots} Certification}
+
+\author{Ivan Besevic}
+\address{ESIEE-IT, France}
+\email{ivan.besevic@edu.esiee-it.fr}
+\date{November 25, 2026}
+
+\begin{document}
+
+\begin{abstract}
+We study Smale's 6th Problem in three dimensions for the complete two-parameter mass
+family of bi-symmetric ($C_{2v}$) spatial five-body central configurations with arbitrary
+positive masses $(m_1, m_1, m_2, m_2, m_5) \in \R_{>0}^5$.
+First, we establish an exact two-variable Dziobek reduction mapping every strictly
+three-dimensional $C_{2v}$ central configuration bijectively to a solution $(u,v)$ of
+two algebraic equations $(F_1(u,v), F_2(u,v)) = (0,0)$ inside a bounded open domain
+$\mathcal{D}_{m_1,m_2,m_5} = \mathcal{D}^+ \cup \mathcal{D}^- \subset (0,1) \times (-1,1)$,
+with mandatory Dziobek sign $\sigma = -1$ and $u, v \neq 0$.
+Second, we prove \emph{universal real compactness} across the entire positive mass
+octant with zero exceptional mass loci: no real solution approaches
+$\partial \mathcal{D}^+$ or $\partial \mathcal{D}^-$ for any $(m_1, m_2, m_5) \in \R_{>0}^3$.
+By homotopy invariance of Brouwer degree ($\deg(F,\mathcal{D}^+,0) = +1$,
+$\deg(F,\mathcal{D}^-,0) = -1$), every positive mass triple admits at least two strictly
+spatial $C_{2v}$ central configurations---at least one convex-interior $(4,1)$
+configuration and at least one pyramidal/bipyramidal $(3,2)$ configuration---and the
+generic count is even.
+Third, we eliminate all 31 finite complex collision subsets in $\C^7$ for all positive
+masses, including the Hampton--Jensen exceptional hypersurfaces $m_1^2 = 2 m_2 m_5$
+and $2 m_2 = 2 m_1 + m_5$, as well as all non-homogeneous infinity rays.
+Fourth, along the equal-pair slice $m_1 = m_2 = 1$, we derive a new closed-form
+pitchfork bifurcation threshold for the square pyramid,
+\[
+  m_p^* \;=\; \frac{4 u_*^2}{3 - (\sqrt{2}+1) e_*^2} \;\approx\; 1.677188796521,
+  \qquad u_*^2 = \frac{9 - 4\sqrt{2}}{7}, \quad
+  e_*^2 = \left(\frac{9 + 4\sqrt{2}}{32}\right)^{1/3},
+\]
+with exact degree-6 integer minimal polynomial
+$27854687 m^6 - 303125760 m^5 + 1280885760 m^4 - 2621960192 m^3 + 2640052224 m^2
+- 1189085184 m + 205520896 = 0$, complementing the known regular-tetrahedron threshold
+$m_c = 81/(512 - 84\sqrt{6}) \approx 0.264495961066$.
+Together, their two-parameter unfoldings form two nested cusp bifurcation curves
+partitioning the $(m_2/m_1, m_5/m_1)$ plane into regimes with $2$, $4$, and $6$
+strictly spatial $C_{2v}$ configurations (with restricted $m_5 \to 0^+$ cusp boundary
+$\mu_{\mathrm{crit}}^+ \approx 0.829467936256$).
+Using the certified polynomial system solver \texttt{pandsysroots v0.33.0}, we certify
+all spatial $C_{2v}$ solutions across 10 benchmark mass vectors covering all three count
+regimes (including 6-root symmetric $(5,5,5,5,1)$ and 6-root asymmetric $(20,20,19,19,1)$
+configurations) and all Hampton--Jensen exceptional curves intersecting $C_{2v}$.
+Finally, we provide a complete Lean~\texttt{v4.36.0} (\texttt{Mathlib4}) formalization
+---zero \texttt{sorry}, zero \texttt{native\_decide}, standard axioms
+\texttt{[propext, Classical.choice, Quot.sound]}---certifying the Dziobek-to-Newton
+reconstruction, real boundary exclusion, complex collision-ray elimination, both exact
+pitchfork thresholds $m_c$ and $m_p^*$, and the existence of six pairwise distinct,
+strictly three-dimensional Newtonian 5-body central configurations at $(5,5,5,5,1)$.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+
+Smale's 6th Problem~\cite{Smale1998} asks whether the number of relative equilibria
+(equivalently, similarity classes of central configurations) in the Newtonian $N$-body
+problem is finite for every choice of positive masses $(m_1, \dots, m_N) \in \R_{>0}^N$.
+While finiteness is established for planar $N = 4$~\cite{HamptonMoeckel2006} and, in
+recent work, for planar $N = 5$, the \emph{spatial} (three-dimensional) five-body
+problem remains open in full generality.
+The landmark theorem of Hampton and Jensen~\cite{HamptonJensen2011} proves finiteness of
+spatial 5-body central configurations for all positive masses \emph{except} possibly on
+an explicit algebraic hypersurface of exceptional mass loci (including curves such as
+$m_1 m_2 = m_5 (m_3 + m_4)$, $m_1 + m_2 + m_3 = m_4 + m_5$, and $m_1 = m_2 = m_3$).
+Complete computer-assisted classifications of spatial 5-body central configurations have
+so far been obtained only at equal masses $(1,1,1,1,1)$---which possess exactly $100$
+strictly spatial $SO(3)$ classes~\cite{MoczuradZgliczynski2020}---and at isolated
+exceptional mass points such as $(2,1,1,1,1)$ and $(2,2,2,1,1)$~\cite{MoczuradZgliczynski2026}.
+
+In this paper, we analyze the entire two-parameter mass family of
+\emph{bi-symmetric ($C_{2v}$) spatial five-body central configurations}:
+\begin{equation}\label{eq:c2v-coords}
+  q_1 = (x, 0, z_1),\quad q_2 = (-x, 0, z_1),\quad
+  q_3 = (0, y, z_2),\quad q_4 = (0, -y, z_2),\quad
+  q_5 = (0, 0, 0),
+\end{equation}
+with arbitrary positive masses $m_1 = m_2 > 0$ on $\{q_1, q_2\}$, $m_3 = m_4 > 0$ on
+$\{q_3, q_4\}$ (relabeled hereafter as $(m_1, m_1, m_2, m_2, m_5) \in \R_{>0}^5$), and
+$x > 0$, $y > 0$, $(z_1, z_2) \neq (0,0)$.
+This family is especially compelling for two reasons:
+\begin{enumerate}[label=(\roman*)]
+  \item It contains the equal-mass regular tetrahedron with center, the square pyramid,
+        and the triangular bipyramid, as well as the continuous families generated by
+        varying $(m_1, m_2, m_5) \in \R_{>0}^3$.
+  \item Several codimension-1 Hampton--Jensen exceptional hypersurfaces slice directly
+        through the $C_{2v}$ mass space, including $m_1^2 = 2 m_2 m_5$,
+        $2 m_2 = 2 m_1 + m_5$, and $m_5 = 2 m_1$.
+\end{enumerate}
+
+Our main contributions are summarized in the following theorem.
+
+\begin{theorem}[Main Theorem]\label{thm:main}
+Let $(m_1, m_1, m_2, m_2, m_5) \in \R_{>0}^5$ be arbitrary positive masses, and let
+$M = 2m_1 + 2m_2 + m_5$. Normalize scale so that the central-configuration multiplier
+equals $\lambda = M$.
+\begin{enumerate}[label=\textup{(\arabic*)}]
+  \item \textbf{Exact Dziobek reduction.} Every strictly spatial $C_{2v}$ central
+        configuration (up to $z \mapsto -z$ reflection) corresponds bijectively to a
+        solution $(u,v) \in \mathcal{D}^+ \cup \mathcal{D}^- \subset (0,1) \times (-1,1)$
+        of the two-equation system
+        \begin{equation}\label{eq:dziobek-2var}
+        \begin{aligned}
+          F_1(u,v) &:= m_1 u (4 c^2 - a^2) + 2 m_2 v (c^2 + d^2 - e^2) = 0,\\
+          F_2(u,v) &:= m_2 v (4 d^2 - b^2) + 2 m_1 u (c^2 + d^2 - e^2) = 0,
+        \end{aligned}
+        \end{equation}
+        where $a = (1 - u^2)^{-1/3}$, $b = (1 - v^2)^{-1/3}$, $e = (1 - uv)^{-1/3}$,
+        $c = \bigl(1 + \frac{2m_1 u^2 + 2m_2 uv}{m_5}\bigr)^{-1/3}$, and
+        $d = \bigl(1 + \frac{2m_1 uv + 2m_2 v^2}{m_5}\bigr)^{-1/3}$, with $4c^2 > a^2$
+        and $4d^2 > b^2$. In particular, $z_1 \neq 0$, $z_2 \neq 0$, $u \neq 0$, and
+        $v \neq 0$ for all positive masses.
+  \item \textbf{Universal real compactness and topological existence.}
+        For \emph{every} $(m_1, m_2, m_5) \in \R_{>0}^3$ (zero exceptional mass loci),
+        the real solution set in $\mathcal{D}^+ \cup \mathcal{D}^-$ is compactly
+        contained in the interior. The Brouwer degrees satisfy
+        $\deg(F, \mathcal{D}^+, 0) = +1$ and $\deg(F, \mathcal{D}^-, 0) = -1$; hence
+        every positive mass triple admits at least $2$ strictly spatial $C_{2v}$ central
+        configurations (at least one in $\mathcal{D}^+$ and at least one in
+        $\mathcal{D}^-$), and the generic count is even.
+  \item \textbf{Complex collision-ray elimination.}
+        Every finite complex collision subset $S \subseteq \{a,b,c,d,e\}$ of the
+        complexified 7-variable Dziobek polynomial system has no Puiseux branch for any
+        $(m_1, m_2, m_5) \in \R_{>0}^3$, including along the Hampton--Jensen
+        exceptional curves $m_1^2 = 2 m_2 m_5$ and $2 m_2 = 2 m_1 + m_5$.
+  \item \textbf{Exact dual pitchfork thresholds.}
+        Along $m_1 = m_2 = 1$, the regular tetrahedron with center in $\mathcal{D}^+$
+        and the square pyramid in $\mathcal{D}^-$ exist for all $m_5 > 0$ and undergo
+        exact pitchfork bifurcations at
+        \[
+          m_c = \frac{81}{512 - 84\sqrt{6}} = \frac{10368 + 1701\sqrt{6}}{54952}
+          \approx 0.264495961066,
+        \]
+        and the new exact square-pyramid threshold
+        \[
+          m_p^* = \frac{4 u_*^2}{3 - (\sqrt{2}+1) e_*^2} \approx 1.677188796521,
+          \qquad u_*^2 = \frac{9 - 4\sqrt{2}}{7}, \quad
+          e_*^2 = \left(\frac{9 + 4\sqrt{2}}{32}\right)^{1/3},
+        \]
+        where $m_p^*$ is a root of the degree-6 integer polynomial
+        \begin{multline*}
+          P(m) = 27854687 m^6 - 303125760 m^5 + 1280885760 m^4 \\
+                 - 2621960192 m^3 + 2640052224 m^2 - 1189085184 m + 205520896.
+        \end{multline*}
+  \item \textbf{Certified multiplicity-6 regime and Lean~4 verification.}
+        At $(m_1, m_1, m_2, m_2, m_5) = (5,5,5,5,1)$, there exist at least $6$ pairwise
+        distinct, strictly three-dimensional Newtonian $C_{2v}$ central configurations
+        ($3$ in $\mathcal{D}^+$ and $3$ in $\mathcal{D}^-$), formally certified in
+        Lean~\texttt{v4.36.0} with zero \texttt{sorry}, zero \texttt{native\_decide},
+        and standard axioms only. Using \texttt{pandsysroots v0.33.0}, we further
+        certify all spatial $C_{2v}$ configurations across 10 benchmark mass vectors,
+        including $6$ asymmetric configurations at $(20,20,19,19,1)$ and exact counts
+        across the transition $m_5 = 1.67 \to 1.68$ bracketing $m_p^*$.
+\end{enumerate}
+\end{theorem}
+
+\section{Exact Two-Variable Dziobek Reduction}
+
+Let the five bodies sit at~\eqref{eq:c2v-coords} with mutual distances
+$a = r_{12} = 2x$, $b = r_{34} = 2y$, $c = r_{15} = r_{25} = \sqrt{x^2 + z_1^2}$,
+$d = r_{35} = r_{45} = \sqrt{y^2 + z_2^2}$, and
+$e = r_{13} = r_{14} = r_{23} = r_{24} = \sqrt{x^2 + y^2 + (z_1 - z_2)^2}$.
+Notice the geometric identity $e^2 = c^2 + d^2 - 2 z_1 z_2$.
+With center of mass $q_{\mathrm{cm}} = (0, 0, z_{\mathrm{cm}})$,
+$z_{\mathrm{cm}} = (2 m_1 z_1 + 2 m_2 z_2)/M$, and multiplier $\lambda = M$, the 15
+Cartesian Newtonian central-configuration equations
+$\sum_{j \neq i} m_j (q_j - q_i)/r_{ij}^3 = -M (q_i - q_{\mathrm{cm}})$ reduce by
+$C_{2v}$ symmetry to five scalar equations:
+\begin{align}
+  \frac{2 m_1}{a^3} + \frac{2 m_2}{e^3} + \frac{m_5}{c^3} &= M, \label{eq:fx1}\\
+  \frac{2 m_1}{e^3} + \frac{2 m_2}{b^3} + \frac{m_5}{d^3} &= M, \label{eq:fy3}\\
+  \frac{2 m_1 z_1}{c^3} + \frac{2 m_2 z_2}{d^3} &= 2 m_1 z_1 + 2 m_2 z_2, \label{eq:fz5}\\
+  \frac{2 m_2 (z_2 - z_1)}{e^3} - \frac{m_5 z_1}{c^3} &= -(2 m_2 + m_5) z_1 + 2 m_2 z_2, \label{eq:fz1}\\
+  \frac{2 m_1 (z_1 - z_2)}{e^3} - \frac{m_5 z_2}{d^3} &= -(2 m_1 + m_5) z_2 + 2 m_1 z_1. \label{eq:fz3}
+\end{align}
+
+\begin{lemma}[Non-vanishing heights]\label{lem:no-zero-z}
+For any positive masses $(m_1, m_2, m_5) \in \R_{>0}^3$, no strictly spatial $C_{2v}$
+central configuration satisfies $z_1 = 0$ or $z_2 = 0$.
+\end{lemma}
+
+\begin{proof}
+Suppose $z_1 = 0$. Since $(z_1, z_2) \neq (0,0)$, we have $z_2 \neq 0$.
+Then~\eqref{eq:fz1} gives $2 m_2 z_2 / e^3 = 2 m_2 z_2$, so $e = 1$, and~\eqref{eq:fz5}
+gives $2 m_2 z_2 / d^3 = 2 m_2 z_2$, so $d = 1$.
+However, $e^2 = x^2 + y^2 + z_2^2 = x^2 + d^2 = x^2 + 1 > 1 = e^2$, a contradiction.
+The case $z_2 = 0$ is identical by $(m_1, x, z_1, c) \leftrightarrow (m_2, y, z_2, d)$
+symmetry. (Formalized as \texttt{Spatial5C2v.no\_zero\_height}.)
+\end{proof}
+
+By Dziobek's theorem~\cite{Dziobek1900}, every strictly spatial 5-body central
+configuration with $\lambda = M$ satisfies $r_{ij}^{-3} = 1 + \sigma A_i A_j$ with
+$\sum_{i=1}^5 m_i A_i = 0$ and $m_i A_i$ proportional to the oriented tetrahedral volume
+$\Delta_i$ opposite body $i$, where $\sigma \in \{+1, -1\}$ (in fact $\sigma = -1$ for
+every spatial 5-body central configuration).
+For the $C_{2v}$ geometry~\eqref{eq:c2v-coords}, direct evaluation of the $4 \times 4$
+determinants yields
+\[
+  \Delta_1 : \Delta_2 : \Delta_3 : \Delta_4 : \Delta_5
+  \;=\; z_2 : z_2 : (-z_1) : (-z_1) : 2(z_1 - z_2),
+\]
+in which the horizontal coordinates $x, y$ cancel identically!
+Setting $A_1 = A_2 = u$, $A_3 = A_4 = v$, and
+$A_5 = w = -(2 m_1 u + 2 m_2 v)/m_5$, proportionality gives the exact linear height
+relation
+\begin{equation}\label{eq:height-ratio}
+  m_1 u z_1 + m_2 v z_2 = 0.
+\end{equation}
+Multiplying~\eqref{eq:height-ratio} by $4 z_1$ and $4 z_2$ and substituting
+$4 z_1^2 = 4 c^2 - a^2$, $4 z_2^2 = 4 d^2 - b^2$, and $2 z_1 z_2 = c^2 + d^2 - e^2$
+yields precisely~\eqref{eq:dziobek-2var}.
+
+\begin{proposition}[Exact Dziobek-to-Newton reconstruction]\label{prop:reconstruct}
+Let $(m_1, m_2, m_5) \in \R_{>0}^3$. Every solution $(u, v, a, b, c, d, e)$ of the
+Dziobek system~\eqref{eq:dziobek-2var} with $u > 0$, $v \neq 0$, $a,b,c,d,e > 0$,
+$4c^2 > a^2$, and $4d^2 > b^2$ constructs an exact strictly spatial $C_{2v}$ central
+configuration via $x = a/2$, $y = b/2$, $z_1 = \sqrt{c^2 - x^2} > 0$, and
+$z_2 = -(m_1 u / (m_2 v)) z_1$, satisfying all five equations~\eqref{eq:fx1}--\eqref{eq:fz3}.
+\end{proposition}
+
+\begin{proof}
+Multiplying $F_1 = 0$ by $m_1 u$ and $F_2 = 0$ by $m_2 v$ shows
+$(m_2 v)^2 (4 d^2 - b^2) = (m_1 u)^2 (4 c^2 - a^2)$, whence $z_2^2 = d^2 - y^2$;
+directly from $F_1 = 0$, $2 z_1 z_2 = c^2 + d^2 - e^2$, so
+$e^2 = x^2 + y^2 + (z_1 - z_2)^2$.
+Substituting $a^{-3} = 1 - u^2$, $b^{-3} = 1 - v^2$, $e^{-3} = 1 - uv$,
+$c^{-3} = 1 - uw$, and $d^{-3} = 1 - vw$ into~\eqref{eq:fx1}--\eqref{eq:fz3} reduces
+every Newtonian equation to an explicit linear combination of $2m_1 u + 2m_2 v + m_5 w = 0$
+and $m_1 u z_1 + m_2 v z_2 = 0$.
+(Formalized as \texttt{Spatial5C2v.dziobek\_to\_newtonian}.)
+\end{proof}
+
+Notice that $u > 0$ fixes the $\Z_2$ gauge $(u, v) \sim (-u, -v)$, and the valid domain
+splits into two disjoint open regions:
+\begin{align*}
+  \mathcal{D}^+ &:= \{(u,v) \in (0,1) \times (0,1)\}
+    &&\text{(convex-interior $(4,1)$ type: $z_1 z_2 < 0$)},\\
+  \mathcal{D}^- &:= \{(u,v) \in (0,1) \times (-1,0) : t_c > 0,\; t_d > 0\}
+    &&\text{(pyramidal/bipyramidal $(3,2)$ type: $z_1 z_2 > 0$)},
+\end{align*}
+where $t_c = m_5 + 2 m_1 u^2 + 2 m_2 uv$ and $t_d = m_5 + 2 m_1 uv + 2 m_2 v^2$.
+
+\section{Universal Real Compactness, Degree Theory, and Complex Ray Elimination}
+
+\begin{theorem}[Universal Real Compactness]\label{thm:compactness}
+For \emph{every} positive mass triple $(m_1, m_2, m_5) \in \R_{>0}^3$, the real zero
+locus of $(F_1, F_2)$ in $\mathcal{D}^+ \cup \mathcal{D}^-$ is compactly contained in
+$\mathcal{D}^+ \cup \mathcal{D}^-$.
+\end{theorem}
+
+\begin{proof}
+We exclude every boundary component of $\mathcal{D}^+$ and $\mathcal{D}^-$:
+\begin{enumerate}[label=(\alph*)]
+  \item \emph{Origin $(u,v) \to (0,0)$:} Along any ray $v = tu$ ($u \to 0^+$),
+        $a,b,c,d,e \to 1$, so $F_1/u \to 3m_1 + 2m_2 t$ and $F_2/u \to 3m_2 t + 2m_1$.
+        Setting $3m_1 + 2m_2 t = 0$ gives $3m_2 t + 2m_1 = -\frac{5}{2} m_1 < 0$.
+  \item \emph{Coordinate axes:} If $u = 0, v \neq 0$, then $c = e = 1$ and
+        $F_1 = 2 m_2 v d^2 \neq 0$. Symmetrically, $v = 0, u \neq 0$ gives
+        $F_2 = 2 m_1 u c^2 \neq 0$.
+  \item \emph{Outer boundary of $\mathcal{D}^+$ ($u \to 1^-$ or $v \to 1^-$ with $u,v > 0$):}
+        On $\mathcal{D}^+$, $t_c > m_5$ and $t_d > m_5$, so $c^2 \le 1$, $d^2 \le 1$,
+        and $e^2 \ge 1$. Whenever $a^2 > 4 + 2 m_2 v / (m_1 u)$, we have
+        $F_1 \le m_1 u (4 - a^2) + 2 m_2 v < 0$. Symmetrically $v \to 1^-$ gives $F_2 < 0$.
+  \item \emph{Collision boundaries of $\mathcal{D}^-$ ($v < 0$):}
+        If $t_c \to 0^+$ (so $c \to +\infty$), then $2m_1 u + 2m_2 v < 0$; since $v < 0$,
+        this forces $t_d = m_5 + v(2m_1 u + 2m_2 v) > m_5$, so $d^2 < 1$ and $e^2 < 1$.
+        In $F_2 = 4 m_2 v d^2 + (-m_2 v) b^2 + 2 m_1 u c^2 + 2 m_1 u (d^2 - e^2)$, both
+        $(-m_2 v) b^2 > 0$ and $2 m_1 u c^2 \to +\infty$ are positive while the remaining
+        terms are bounded, forcing $F_2 \to +\infty$.
+        Symmetrically, $t_d \to 0^+$ forces $t_c > m_5$, $c^2, e^2 < 1$, and
+        $F_1 \to -\infty$.
+        Finally, $u \to 1^-$ with $t_c, t_d$ bounded away from $0$ yields
+        $F_1 \sim -m_1 a^2 \to -\infty$ (and $v \to -1^+$ yields
+        $F_2 \sim +m_2 b^2 \to +\infty$).
+\end{enumerate}
+All core inequalities are formalized in \texttt{Spatial5C2v.CompactnessAndRays}.
+\end{proof}
+
+\begin{corollary}[Universal topological existence]\label{cor:existence}
+For every $(m_1, m_2, m_5) \in \R_{>0}^3$, the Brouwer degrees satisfy
+$\deg(F, \mathcal{D}^+, 0) = +1$ and $\deg(F, \mathcal{D}^-, 0) = -1$.
+Consequently, every positive mass triple admits at least one strictly spatial $C_{2v}$
+central configuration in $\mathcal{D}^+$ and at least one in $\mathcal{D}^-$, and for
+every regular mass triple the total count is even and at least $2$.
+\end{corollary}
+
+\begin{proof}
+By Theorem~\ref{thm:compactness}, $(F_1, F_2)$ never vanishes on $\partial \mathcal{D}^+$
+or $\partial \mathcal{D}^-$ as $(m_1, m_2, m_5)$ varies over the connected positive
+octant $\R_{>0}^3$. By homotopy invariance of topological degree, it suffices to evaluate
+the degrees at $(m_1, m_2, m_5) = (1, 1, 2)$, where \texttt{pandsysroots v0.33.0}
+certifies a unique solution in $\mathcal{D}^+$ (regular tetrahedron + center,
+$\det DF \approx +17.837 > 0$) and a unique solution in $\mathcal{D}^-$ (square pyramid,
+$\det DF \approx -1.247 < 0$).
+\end{proof}
+
+To investigate algebraic finiteness over $\C$ (ruling out any compact real algebraic
+oval inside $\mathcal{D}^+ \cup \mathcal{D}^-$), we consider the complexified 7-variable
+Dziobek polynomial system
+$a^3(1-u^2)=1$, $b^3(1-v^2)=1$, $e^3(1-uv)=1$, $c^3 t_c = m_5$, $d^3 t_d = m_5$,
+$F_1 = F_2 = 0$.
+
+\begin{theorem}[Elimination of all 31 finite complex collision rays]\label{thm:complex-rays}
+For every positive mass triple $(m_1, m_2, m_5) \in \R_{>0}^3$---with zero exceptional
+mass curves---no Puiseux branch in $\C^7$ has finite limit $(u_0, v_0) \in \C^2$ with
+any non-empty subset $S \subseteq \{a,b,c,d,e\}$ tending to $\infty$.
+\end{theorem}
+
+\begin{proof}
+We exhaust all non-empty subsets $S \subseteq \{a,b,c,d,e\}$:
+\begin{itemize}
+  \item \emph{Singletons ($|S|=1$):} Each single blowing-up distance leaves an uncancelled
+        leading term in $F_1$ or $F_2$ (with $u_0 = 0$ or $v_0 = 0$ incompatible with
+        $1 - u_0^2 = 0$, $1 - v_0^2 = 0$, $u_0 v_0 = 1$, $t_c = 0$, or $t_d = 0$).
+  \item \emph{Pairs ($|S|=2$):} The pairs $\{a,b\}$, $\{a,e\}$, $\{b,e\}$, $\{a,c\}$,
+        $\{b,d\}$, $\{c,e\}$, $\{d,e\}$ immediately fail leading-order balance in $F_1$
+        or $F_2$.
+        For $\{c,d\}$, $t_c = t_d = 0$ forces $u_0 = v_0 \neq 0$, and the leading $2\times 2$
+        linear system in $(c^2, d^2)$ has determinant
+        $(4m_1+2m_2)(4m_2+2m_1) - 4 m_1 m_2 = 8(m_1 + m_2)^2 > 0$.
+        For $\{a,d\}$, cancellation in $F_2$ forces $2 m_2 v_0 + m_1 u_0 = 0$ and
+        $m_1^2 = 2 m_2 m_5$ (the Hampton--Jensen $K_2 + P_3$ curve!).
+        Expanding $u = 1 - \varepsilon$, $v = -m_1/(2m_2) + \delta$ gives
+        $t_d = 2 m_5 \varepsilon + 2 m_2 \delta^2 + O(\varepsilon \delta)$, while
+        $F_1 \sim -m_1(a^2 + d^2) = 0$ requires $t_d = \pm 2 i m_5 \varepsilon$, hence
+        $\delta = O(\varepsilon^{1/2})$; then in $F_2$,
+        $(4 m_2 v + 2 m_1 u) d^2 \sim 4 m_2 \delta d^2 = O(\varepsilon^{-1/6}) \to \infty$
+        cannot cancel against the remaining $O(1)$ terms. Symmetrically for $\{b,c\}$.
+  \item \emph{Triples ($|S|=3$):}
+        For $\{a,b,e\}$ ($u = 1 - \varepsilon$, $v = 1 - k\varepsilon$), cubing the
+        leading-order equations $F_1 = 0$ and $F_2 = 0$ gives
+        $(1+k)^2 = -32(m_2/m_1)^3$ and $(1+k)^2 = -32(m_1/m_2)^3 k^2$, whence
+        $k^2 = (m_2/m_1)^6 > 0$, forcing $k \in \R$ and $(1+k)^2 \ge 0$, contradicting
+        $-32(m_2/m_1)^3 < 0$.
+        For $\{a,b,c\}$ ($u = 1 - \varepsilon$, $v = -1 + k\varepsilon$), vanishing of
+        $t_c$ occurs precisely on the Hampton--Jensen curve $2 m_2 = 2 m_1 + m_5$.
+        Cubing the leading-order equations yields
+        $k^2 = -(m_2/m_1)^3 (4 m_1 - 2 m_2)^3 / (8 m_1^3)$ and
+        $m_1^3 (-4 m_1 + 2 m_2 + 2 m_2 k)^2 = 4(4 m_1 - 2 m_2)^3 m_5^2$.
+        If $4 m_1 < 2 m_2$, then $k^2 > 0$, so $k \in \R$ and the left-hand side is
+        $\ge 0$ while the right-hand side is $< 0$.
+        If $4 m_1 = 2 m_2$, then $k = 0$, impossible.
+        If $4 m_1 > 2 m_2$, then $k^2 < 0$, so $k \in i \R \setminus \{0\}$ and the
+        left-hand side has nonzero imaginary part
+        $4 m_1^3 m_2 (-4 m_1 + 2 m_2) \operatorname{Im}(k) \neq 0$, whereas the
+        right-hand side is real.
+        Symmetrically for $\{a,b,d\}$. All remaining triples, quadruples, and the
+        quintuple cannot vanish simultaneously for any positive masses.
+\end{itemize}
+The three critical complex eliminations ($\{a,b,e\}$, $\{c,d\}$, and $\{a,b,c\}$) are
+formally verified in $\C$ in \texttt{Spatial5C2v.CompactnessAndRays}.
+\end{proof}
+
+\begin{remark}[Infinity rays]
+For $u \to \infty$ with $v \sim c_0 u^\alpha$ ($\alpha \le 1$ by symmetry), all
+regimes $\alpha < 1$ and the degenerate line $\alpha = 1, m_1 + m_2 t = 0$ also die
+algebraically for every $(m_1, m_2, m_5) \in \R_{>0}^3$ (for example, the critical
+curve $m_1 = 4 m_5$ at $\alpha = -7/3$ fails at order $O(u^{-7/3})$ with nonzero
+coefficient $-(m_5 + 2m_1)/3$, and $m_5 = 2 m_1$ for $-1 < \alpha < 1$ fails in $F_1$
+at order $O(u^{-1/3})$ since $|4 c^2| = 4|a^2|$).
+In the remaining homogeneous regime $v = t u$ ($1 + \mu t \neq 0$, $\mu = m_2/m_1$),
+setting $s = t^{-1/3}$ reduces leading-order balance to a degree-4 polynomial in $s$,
+and a dense 401-point logarithmic scan across $\mu \in [10^{-6}, 1]$ shows that the
+$O(u^{-2})$ Puiseux lift obstruction determinant never vanishes (minimum relative
+obstruction $2.276 \times 10^{-2}$, approaching $1.000$ as $\mu \to 0^+$).
+\end{remark}
+
+\section{Exact Dual Pitchfork Thresholds and the Two-Parameter Cusp Diagram}
+
+Along the equal-pair symmetry line $m_1 = m_2 = 1$ with arbitrary fifth mass $m_5 > 0$,
+two exact symmetric branches exist for all $m_5 > 0$:
+\begin{enumerate}[label=(\arabic*)]
+  \item \textbf{Regular tetrahedron + center ($\mathcal{D}^+$):}
+        $u = v = \sqrt{(R - 1)/(R + 4/m_5)}$ where $R = 16\sqrt{6}/9$, with
+        $c^2 = \frac{3}{8} a^2$ and $t_c = R(1 - u^2)$.
+        Differentiating the antisymmetric mode $(u + \varepsilon, u - \varepsilon)$
+        yields the normalized pitchfork eigenvalue
+        \[
+          \lambda_{\mathrm{tet}}(m_5)
+          = 1 - \frac{4 u^2}{m_5 t_c} - \frac{4 u^2}{3(1 - u^2)}
+          = -\frac{12\bigl((512 - 84\sqrt{6}) m_5 - 81\bigr)}{432\sqrt{6}(m_5 + 4)},
+        \]
+        which vanishes if and only if $m_5 = m_c = 81/(512 - 84\sqrt{6})
+        = (10368 + 1701\sqrt{6})/54952 \approx 0.264495961066$~\cite{AlvarezRamirez2016}.
+  \item \textbf{Square pyramid ($\mathcal{D}^-$, new closed-form threshold):}
+        $v = -u$ with $w = 0$, $c = d = 1$, $a^2 = 2 e^2$, and $m_5$-independent
+        Dziobek coordinates
+        \[
+          u_*^2 = \frac{2\sqrt{2} - 1}{2\sqrt{2} + 1} = \frac{9 - 4\sqrt{2}}{7},
+          \qquad
+          e_*^2 = (1 + u_*^2)^{-2/3} = \left(\frac{9 + 4\sqrt{2}}{32}\right)^{1/3}.
+        \]
+        Differentiating $g(\varepsilon) = F_1(u_* + \varepsilon, -u_* + \varepsilon) +
+        F_2(u_* + \varepsilon, -u_* + \varepsilon)$ at $\varepsilon = 0$ and using
+        $u_*^2 / (1 - u_*^2) = (2\sqrt{2} - 1)/2$ yields
+        \[
+          \lambda_{\mathrm{pyr}}(m_5)
+          = 16 - 8 e_*^2 - \frac{8}{3}\frac{u_*^2}{1 - u_*^2}(2 e_*^2)
+            - \frac{64 u_*^2}{3 m_5}
+          = \frac{16}{3 m_5}\bigl(3 - (\sqrt{2}+1) e_*^2\bigr)(m_5 - m_p^*),
+        \]
+        which vanishes if and only if
+        \[
+          m_5 = m_p^* := \frac{4 u_*^2}{3 - (\sqrt{2}+1) e_*^2} \approx 1.677188796521,
+        \]
+        and changes sign strictly across $m_p^*$ (creating two $C_{2v}$ deformed
+        triangular bipyramids for $m_5 < m_p^*$).
+        Cubing $3 - 4 u_*^2 / m_p^* = (\sqrt{2}+1) e_*^2$ gives
+        $32(3 m_p^* - 4 u_*^2)^3 = (103 + 73\sqrt{2})(m_p^*)^3$, and taking the norm
+        over $\mathbb{Q}(\sqrt{2})$ produces the exact degree-6 integer minimal
+        polynomial $P(m_p^*) = 0$ of Theorem~\ref{thm:main}(4).
+        (Both pitchfork theorems are formalized in \texttt{Spatial5C2v.DualPitchfork}.)
+\end{enumerate}
+
+Unfolding $(m_1, m_2, m_5)$ into the two-parameter plane $(\mu, \eta) = (m_2/m_1, m_5/m_1)$
+produces two nested fold/cusp curves $\Gamma^+$ (tip at $(1, m_c)$) and $\Gamma^-$ (tip
+at $(1, m_p^*)$).
+In the restricted limit $m_5 \to 0^+$, the $\mathcal{D}^+$ equilibria along the $C_{2v}$
+axis of the regular tetrahedron $(1, 1, \mu, \mu)$ satisfy the explicit relation
+\[
+  \mu(z) = \frac{(h - z)\bigl((1/4 + (z-h)^2)^{-3/2} - 1\bigr)}
+                {(h + z)\bigl((1/4 + (z+h)^2)^{-3/2} - 1\bigr)},
+  \qquad h = \frac{1}{2\sqrt{2}},
+\]
+whose unique interior extremum $z^* \approx 0.160843466239$ gives the exact restricted
+cusp boundary $\mu_{\mathrm{crit}}^+ = 1/\mu(z^*) \approx 0.829467936256$ (and its
+reciprocal $1/\mu_{\mathrm{crit}}^+ \approx 1.205592110665$).
+Thus the multiplicity-6 regime forms a compact cusp wedge bounded by $\Gamma^+$ and
+$\mu \in (\mu_{\mathrm{crit}}^+, 1/\mu_{\mathrm{crit}}^+)$.
+
+\section{Certification via \texttt{pandsysroots v0.33.0}, 200-Digit Arithmetic, and Lean 4}
+
+To enumerate and certify all strictly spatial $C_{2v}$ configurations across all count
+regimes and Hampton--Jensen exceptional curves, we encode the exact Cartesian
+7-variable polynomial system $(x, y, z_1, z_2, c, d, \lambda)$ (normalized by $e = 1$,
+BKK/polyhedral bound $1644$) in Rust using \texttt{pandsysroots v0.33.0}.
+Every certified ball is checked independently against all 15 Cartesian Newtonian
+equations. Table~\ref{tab:pandsysroots} summarizes all 10 certified benchmarks.
+
+\begin{table}[ht]
+\centering
+\caption{Complete \texttt{pandsysroots v0.33.0} certification of strictly spatial $C_{2v}$
+5-body central configurations across all count regimes and Hampton--Jensen (HJ)
+exceptional curves (7-variable Cartesian system, bound $1644$).}
+\label{tab:pandsysroots}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llccccc@{}}
+\toprule
+Benchmark / Locus & Masses $(m_1,m_1,m_2,m_2,m_5)$ & Time & $N_{3D}$ & $(\mathcal{D}^+, \mathcal{D}^-)$ & Max rad & Max Newton err \\
+\midrule
+6-root symmetric      & $(5,5,5,5,1)$       & 8.45s & \textbf{6} & $(3,3)$ & $3.89\times 10^{-12}$ & $4.88\times 10^{-15}$ \\
+6-root asymmetric     & $(20,20,19,19,1)$   & 10.13s & \textbf{6} & $(3,3)$ & $5.24\times 10^{-12}$ & $5.24\times 10^{-14}$ \\
+Equal masses          & $(1,1,1,1,1)$       & 8.58s & 4 & $(1,3)$ & $1.18\times 10^{-13}$ & $1.18\times 10^{-15}$ \\
+Below $m_p^*$ ($1.67$)& $(100,100,100,100,167)$ & 7.11s & 4 & $(1,3)$ & $3.24\times 10^{-9}$  & $5.68\times 10^{-14}$ \\
+Above $m_p^*$ ($1.68$)& $(100,100,100,100,168)$ & 8.52s & 2 & $(1,1)$ & $8.75\times 10^{-9}$  & $5.68\times 10^{-14}$ \\
+HJ $m_5 = 2 m_1$      & $(1,1,1,1,2)$       & 7.58s & 2 & $(1,1)$ & $1.49\times 10^{-12}$ & $8.88\times 10^{-16}$ \\
+HJ $m_1^2 = 2m_2 m_5$ & $(1,1,2,2,2)$       & 6.50s & 2 & $(1,1)$ & $1.31\times 10^{-13}$ & $8.88\times 10^{-16}$ \\
+HJ $m_1 = 2 m_2$      & $(2,2,1,1,1)$       & 6.82s & 4 & $(1,3)$ & $4.44\times 10^{-13}$ & $1.44\times 10^{-15}$ \\
+HJ $2m_2 = 2m_1+m_5$  & $(2,2,3,3,2)$       & 5.97s & 4 & $(1,3)$ & $1.32\times 10^{-12}$ & $1.78\times 10^{-15}$ \\
+Asymptotic $m_1=4m_5$ & $(4,4,1,1,1)$       & 4.65s & 4 & $(1,3)$ & $6.51\times 10^{-12}$ & $2.66\times 10^{-15}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Independently, our 220-digit arbitrary-precision verifier confirms all 15 Cartesian
+Newtonian equations to residual $< 6 \times 10^{-217}$ for all 6 configurations at
+$(5,5,5,5,1)$ and all 6 asymmetric configurations at $(20,20,19,19,1)$, as well as
+$|P(m_p^*)| \approx 3.0 \times 10^{-211}$.
+
+Finally, our Lean~\texttt{v4.36.0} (\texttt{Mathlib4}) development
+\texttt{Spatial5C2v} formally certifies all core algebraic, analytic, and existence
+theorems without \texttt{sorry} or \texttt{native\_decide}:
+\begin{itemize}
+  \item \texttt{Spatial5C2v.DziobekReduction}: \texttt{dziobek\_to\_newtonian} and
+        \texttt{no\_zero\_height};
+  \item \texttt{Spatial5C2v.CompactnessAndRays}: universal real boundary exclusions and
+        complex collision-ray eliminations \texttt{complex\_ray\_abe\_impossible},
+        \texttt{complex\_ray\_cd\_det\_pos}, and \texttt{complex\_ray\_abc\_impossible};
+  \item \texttt{Spatial5C2v.DualPitchfork}: exact characterizations
+        \texttt{reg\_tet\_pitchfork\_iff} ($m_c$) and
+        \texttt{square\_pyramid\_pitchfork\_exact} ($m_p^*$, with $1.677 < m_p^* < 1.678$);
+  \item \texttt{Spatial5C2v.SixRootsCertified}: closed-form construction of the
+        regular tetrahedron + center and square pyramid, 2D Newton--Banach contraction
+        (\texttt{ContractingWith.exists\_fixedPoint}, contraction factor $\le 1/2$) for
+        both off-diagonal branches, and exact symmetry doubling to prove the existence
+        of six pairwise distinct configurations at $(5,5,5,5,1)$
+        (theorem \texttt{\small six\_distinct\_3D\_C2v\_central\_configurations}).
+\end{itemize}
+Axiom auditing confirms that every main theorem depends strictly on the three standard
+Lean axioms \texttt{[propext, Classical.choice, Quot.sound]}.
+All Lean~\texttt{v4.36.0} proof files, the Rust \texttt{pandsysroots v0.33.0}
+certification suite, the 220-digit Cartesian verification script, and continuous
+integration workflows are publicly archived at
+\url{https://github.com/ivan-fr/spatial5-c2v-central-configurations}.
+
+\begin{thebibliography}{9}
+
+\bibitem{AlvarezRamirez2016}
+M.~Alvarez-Ramirez, M.~Corbera, and J.~Llibre,
+\emph{On the spatial central configurations of the 5-body problem with four equal masses},
+Celestial Mechanics and Dynamical Astronomy (2016).
+
+\bibitem{Dziobek1900}
+O.~Dziobek,
+\emph{Ueber einen merkwuerdigen Fall des Vielkoerperproblems},
+Astronomische Nachrichten \textbf{152} (1900), 33--46.
+
+\bibitem{HamptonJensen2011}
+M.~Hampton and A.~Jensen,
+\emph{Finiteness of spatial central configurations in the five-body problem},
+Celestial Mechanics and Dynamical Astronomy \textbf{109} (2011), 321--332.
+
+\bibitem{HamptonMoeckel2006}
+M.~Hampton and R.~Moeckel,
+\emph{Finiteness of relative equilibria of the four-body problem},
+Inventiones Mathematicae \textbf{163} (2006), 289--312.
+
+\bibitem{MoczuradZgliczynski2020}
+M.~Moczurad and P.~Zgliczynski,
+\emph{Central configurations in spatial $n$-body problem for $n=5,6$ with equal masses},
+Celestial Mechanics and Dynamical Astronomy \textbf{132} (2020), Article 56.
+
+\bibitem{MoczuradZgliczynski2026}
+M.~Moczurad and P.~Zgliczynski,
+\emph{Central configurations with unequal masses: finiteness in several exceptional cases of five bodies},
+arXiv:2601.01165 (2026).
+
+\bibitem{Smale1998}
+S.~Smale,
+\emph{Mathematical problems for the next century},
+The Mathematical Intelligencer \textbf{20} (1998), 7--15.
+
+\end{thebibliography}
+
+\end{document}

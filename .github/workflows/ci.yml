@@ -1,0 +1,63 @@
+name: Verify Spatial 5-Body C2v Theorem (Lean 4.36.0 + pandsysroots + 220-digit Python)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lean-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install elan & Lean 4.36.0
+        run: |
+          curl https://elan.lean-lang.org/elan-init.sh -sSf | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+      - name: Fetch Mathlib4 cache and build Spatial5C2v
+        working-directory: lean
+        run: |
+          lake exe cache get
+          lake build Spatial5C2v
+      - name: Audit Lean axioms (no sorryAx, no native_decide)
+        working-directory: lean
+        run: |
+          cat <<'EOF' > Audit.lean
+          import Spatial5C2v
+          #print axioms Spatial5C2v.dziobek_to_newtonian
+          #print axioms Spatial5C2v.no_zero_height
+          #print axioms Spatial5C2v.complex_ray_abe_impossible
+          #print axioms Spatial5C2v.complex_ray_abc_impossible
+          #print axioms Spatial5C2v.reg_tet_pitchfork_iff
+          #print axioms Spatial5C2v.square_pyramid_pitchfork_exact
+          #print axioms Spatial5C2v.six_distinct_3D_C2v_central_configurations
+          EOF
+          OUT=$(lake env lean Audit.lean)
+          echo "$OUT"
+          if echo "$OUT" | grep -E "sorryAx|Lean.ofReduceBool|Lean.trustCompiler"; then
+            echo "UNEXPECTED AXIOM FOUND!"
+            exit 1
+          fi
+          rm -f Audit.lean
+
+  rust-pandsysroots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run 10-benchmark pandsysroots v0.33.0 certification
+        run: |
+          OUT=$(cargo run --release)
+          echo "$OUT"
+          echo "$OUT" | grep -q "ALL 10 BENCHMARKS MATCH EXPECTED COUNT: true"
+
+  python-220digit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run 220-digit Cartesian 15-equation verification
+        run: python3 verify_200digits.py
