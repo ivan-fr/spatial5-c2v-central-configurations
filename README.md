@@ -38,6 +38,8 @@ python3 verify_200digits.py
 
 ## Paper & Verification Artifacts
 
+- Zenodo Preprint & Archive (DOI): [`10.5281/zenodo.24519002`](https://doi.org/10.5281/zenodo.24519002) ([record](https://zenodo.org/records/24519002))
+- HexagonMath Preprint ID: `hexagon:2611.01025`
 - Paper PDF: [`paper/Spatial5_C2v_Central_Configurations.pdf`](paper/Spatial5_C2v_Central_Configurations.pdf)
 - Pure 7-bit ASCII AMS LaTeX source: [`paper/Spatial5_C2v_Central_Configurations.tex`](paper/Spatial5_C2v_Central_Configurations.tex)
 - Repository: <https://github.com/ivan-fr/spatial5-c2v-central-configurations>
